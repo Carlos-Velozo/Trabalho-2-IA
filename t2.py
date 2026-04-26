@@ -22,7 +22,7 @@ class Othello:
         self._inicializar_posicoes_iniciais()
 
     def _inicializar_posicoes_iniciais(self):
-        meio = self.tamanho // 2
+        meio = self.tamanho // 2 #divisão por inteiro descartando a parte frácionaria
         self.tabuleiro[meio - 1][meio - 1] = JOGADOR_BRANCO
         self.tabuleiro[meio][meio] = JOGADOR_BRANCO
         self.tabuleiro[meio - 1][meio] = JOGADOR_PRETO
@@ -30,7 +30,7 @@ class Othello:
 
     def jogada_e_valida(self, linha, coluna, jogador):
         """
-        Verifica se colocar uma peça na linha 'r' e coluna 'c' é uma jogada válida.
+        Verifica se colocar uma peça na linha e coluna é uma jogada válida.
         Regra: A peça deve flanquear (encurralar) pelo menos uma peça adversária.
         """
         if self.tabuleiro[linha][coluna] != VAZIO:
@@ -165,15 +165,15 @@ class AgenteMinMax:
 
     def obter_jogada(self, jogo):
         """Inicia a busca na árvore de decisão para encontrar a melhor jogada."""
-        melhor_valor = -math.inf
+        melhor_valor = -math.inf    #Infinito negativo
         melhor_jogada = None
-        alfa, beta = -math.inf, math.inf
+        alfa, beta = -math.inf, math.inf    #alfa -infinito; beta= +infinito
         
         jogadas = jogo.obter_jogadas_validas(self.jogador)
         if not jogadas: return None 
         
         for jogada in jogadas:
-            novo_jogo = copy.deepcopy(jogo) 
+            novo_jogo = copy.deepcopy(jogo) # Cópia do jogo
             novo_jogo.aplicar_jogada(jogada, self.jogador)
             
             valor = self._valor_minimo(novo_jogo, self.profundidade - 1, alfa, beta)
@@ -191,7 +191,7 @@ class AgenteMinMax:
         # Critério de parada: fim do jogo ou atingiu a profundidade máxima (níveis)
         if jogo.jogo_terminou() or profundidade == 0: return self._avaliar_estado(jogo)
             
-        v = -math.inf
+        v = -math.inf   #-Infinito
         jogadas = jogo.obter_jogadas_validas(self.jogador)
 
         # Se não tem jogadas, passa a vez e deixa o MIN jogar
@@ -200,13 +200,14 @@ class AgenteMinMax:
         for jogada in jogadas:
             novo_jogo = copy.deepcopy(jogo)
             novo_jogo.aplicar_jogada(jogada, self.jogador)
-            v = max(v, self._valor_minimo(novo_jogo, profundidade - 1, alfa, beta))
+            v = max(v, self._valor_minimo(novo_jogo, profundidade - 1, alfa, beta)) #Escolha do melhor Cenario
 
             # Regra: Se v for maior ou igual ao beta do MIN, o MIN nunca vai deixar chegar aqui. Podemos ignorar o resto das jogadas deste ramo.
+            # Poda Beta
             if v >= beta:
                 return v 
             
-            alfa = max(alfa, v) 
+            alfa = max(alfa, v) #escolhe o valor maior 
         return v
 
     def _valor_minimo(self, jogo, profundidade, alfa, beta):
@@ -215,7 +216,7 @@ class AgenteMinMax:
         # Critério de parada: fim do jogo ou atingiu a profundidade máxima (níveis)
         if jogo.jogo_terminou() or profundidade == 0: return self._avaliar_estado(jogo)
             
-        v = math.inf
+        v = math.inf    # +Infinito
         jogadas = jogo.obter_jogadas_validas(-self.jogador)
         # Se não tem jogadas, passa a vez e deixa o MAX jogar
         if not jogadas: return self._valor_maximo(jogo, profundidade - 1, alfa, beta)
@@ -223,17 +224,19 @@ class AgenteMinMax:
         for jogada in jogadas:
             novo_jogo = copy.deepcopy(jogo)
             novo_jogo.aplicar_jogada(jogada, -self.jogador)
-            v = min(v, self._valor_maximo(novo_jogo, profundidade - 1, alfa, beta))
+            v = min(v, self._valor_maximo(novo_jogo, profundidade - 1, alfa, beta)) #Escolha do pior Cenario
+            
             # Regra: Se v for menor ou igual ao alfa do MAX, o MAX nunca vai deixar chegar aqui. Podemos ignorar o resto das jogadas deste ramo.
+            # Poda Alfa
             if v <= alfa: return v 
-            beta = min(beta, v) 
+            beta = min(beta, v)     #escolhe o valor menor
         return v
 
 # =====================================================================
 # PARTE 3: AGENTE MONTE CARLO TREE SEARCH (MCTS)
 # =====================================================================
 class NodoMCTS:
-    CONSTANTE_EXPLORACAO = math.sqrt(2)
+    CONSTANTE_EXPLORACAO = math.sqrt(2) #raiz quadrada de 2 
 
     """Representa um nó na árvore de busca do MCTS."""
     def __init__(self, estado, jogador, pai=None, jogada_geradora=None):
@@ -252,15 +255,16 @@ class NodoMCTS:
         UCT = (vitórias/visitas) + c * sqrt(ln(visitas_do_pai) / visitas_do_filho)
         Equilibra a 'explotação' (jogadas boas) com 'exploração' (jogadas não visitadas).
         """
+        #Max procura o nodo que tiver maior resultado da formula UCT. Equilibra a Explotação com a Exploração
         return max(self.filhos, key=lambda n: (n.vitorias / n.visitas) + self.CONSTANTE_EXPLORACAO * math.sqrt(math.log(self.visitas) / n.visitas))
 
     def expandir(self):
         """
         EXPANSÃO: Pega uma jogada não testada, aplica no estado e cria um novo nó filho.
         """
-        jogada = self.jogadas_nao_testadas.pop() 
-        novo_estado = copy.deepcopy(self.estado)
-        novo_estado.aplicar_jogada(jogada, self.jogador_turno)
+        jogada = self.jogadas_nao_testadas.pop() # Rmove o ultimo item da lista jogadas_nao_testadas
+        novo_estado = copy.deepcopy(self.estado) # Cópia do jogo 
+        novo_estado.aplicar_jogada(jogada, self.jogador_turno) # Aplica jogada na cópia
         
         # Cria o nó filho (trocando a vez do jogador)
         novo_no = NodoMCTS(novo_estado, -self.jogador_turno, self, jogada)
@@ -294,7 +298,7 @@ class AgenteMCTS:
             estado_simulado = copy.deepcopy(jogo)
             
             # 1. SELEÇÃO
-            while not no_atual.jogadas_nao_testadas and no_atual.filhos:
+            while not no_atual.jogadas_nao_testadas and no_atual.filhos: # Enquanto tiver jogadas não testadas e ainda tiver filhos
                 no_atual = no_atual.selecionar_melhor_filho_uct()
                 estado_simulado.aplicar_jogada(no_atual.jogada_geradora, -no_atual.jogador_turno) 
             
@@ -308,15 +312,15 @@ class AgenteMCTS:
             while not estado_simulado.jogo_terminou():
                 jogadas = estado_simulado.obter_jogadas_validas(jogador_simulacao)
                 if jogadas:
-                    jogada_aleatoria = random.choice(jogadas)
-                    estado_simulado.aplicar_jogada(jogada_aleatoria, jogador_simulacao)
-                jogador_simulacao = -jogador_simulacao 
+                    jogada_aleatoria = random.choice(jogadas)   
+                    estado_simulado.aplicar_jogada(jogada_aleatoria, jogador_simulacao) # Jogada aleatoria aplicada
+                jogador_simulacao = -jogador_simulacao  #Alterna os turnos
             
             # 4. RETROPROPAGAÇÃO
             vencedor = estado_simulado.obter_vencedor()
             while no_atual is not None:
                 no_atual.retropropagar(vencedor)
-                no_atual = no_atual.pai
+                no_atual = no_atual.pai # Sobe um nivel da arvore
 
         # Após todas as simulações, o resultado final é simplesmente 
         # escolher o nó filho a partir da raiz que foi MAIS visitado (mais confiável).
@@ -407,7 +411,7 @@ def menu_principal():
         
         if escolha == '1':
             a1 = AgenteMinMax(JOGADOR_PRETO, profundidade=3)
-            a2 = AgenteMCTS(JOGADOR_BRANCO, simulacoes=200)
+            a2 = AgenteMCTS(JOGADOR_BRANCO, simulacoes=500)
             vencedor = jogar_partida(a1, a2, tamanho, debug=True)
             print(f"\nVencedor final: {vencedor}")
             
@@ -415,10 +419,10 @@ def menu_principal():
             rodar_experimento(AgenteMinMax, 3, AgenteMinMax, 5, tamanho, total_partidas=10)
             
         elif escolha == '3':
-            rodar_experimento(AgenteMCTS, 50, AgenteMCTS, 200, tamanho, total_partidas=10)
+            rodar_experimento(AgenteMCTS, 50, AgenteMCTS, 500, tamanho, total_partidas=10)
             
         elif escolha == '4':
-            rodar_experimento(AgenteMinMax, 3, AgenteMCTS, 200, tamanho, total_partidas=10)
+            rodar_experimento(AgenteMinMax, 3, AgenteMCTS, 500, tamanho, total_partidas=20)
 
 if __name__ == "__main__":
     menu_principal()
